@@ -1,4 +1,5 @@
 import 'dotenv/config';
+
 console.log(process.env.DBHOST);
 import  express from 'express';
 
@@ -9,6 +10,7 @@ const app = express();
     console.log('DBHOST:', process.env.DBHOST);
     console.log('DBUSER:', process.env.DBUSER);
     res.send('Olá ' + process.env.DBUSER);
+    
     });
 }
 const port = process.env.DBPORT;
