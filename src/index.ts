@@ -20,10 +20,7 @@ const app = express();
             res.status(500).send('DBHOST não está definido');
              return;
         }
-        if(!process.env.DBDATABASE){
-            res.status(500).send('DBDATABASE não está definido');
-             return ;
-        }
+       
         if(!process.env.DBPORT){
             res.status(500).send('DBPORT não está definido');
             return;
@@ -34,7 +31,7 @@ const app = express();
                 host: process.env.DBHOST,
                 user: process.env.DBUSER,
                 password: process.env.DBPASSWORD,
-                database: process.env.DBDATABASE,
+             
                 port: Number(process.env.DBPORT)
                 
             });   
