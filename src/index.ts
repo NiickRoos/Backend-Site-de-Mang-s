@@ -7,7 +7,11 @@ import express, { Request, Response } from 'express';
 const app = express();
 
 app.get('/produtos', async (req: Request, res: Response) => {
+<<<<<<< HEAD
     if (!process.env.DBUSER) {
+=======
+    if (!process.env.DBUSER) {//! significa que é a negação da variável
+>>>>>>> 1bc8ac0 (tentei tarefa)
         res.status(500).send("Variável de ambiente DBUSER não está definida")
         return;
     }
@@ -27,7 +31,10 @@ app.get('/produtos', async (req: Request, res: Response) => {
         res.status(500).send("Variável de ambiente DBPORT não está definida")
         return;
     }
+<<<<<<< HEAD
     console.log(process.env)
+=======
+>>>>>>> 1bc8ac0 (tentei tarefa)
     try {
         const connection = await mysql.createConnection({
             host: process.env.DBHOST,
@@ -35,7 +42,11 @@ app.get('/produtos', async (req: Request, res: Response) => {
             password: process.env.DBPASSWORD,
             database: process.env.DBNAME,
             port: Number(process.env.DBPORT)
+<<<<<<< HEAD
         });
+=======
+        })
+>>>>>>> 1bc8ac0 (tentei tarefa)
       
         const [rows] = await connection.execute('SELECT * FROM produtos');
 
