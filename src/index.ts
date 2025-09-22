@@ -10,7 +10,7 @@ const app = express();
 
 app.get('/produtos', async (req: Request, res: Response) => {
     if (!process.env.DBUSER) { 
-        res.status(500).send("Variável de ambiente DBUSER não está definida")
+        res.status(500).send("Variável de ambiente DBUSER não está definido")
         return;
     }
     if (process.env.DBPASSWORD==undefined) {
