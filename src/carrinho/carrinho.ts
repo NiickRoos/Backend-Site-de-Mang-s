@@ -1,6 +1,6 @@
 // src/carrinho/carrinho.ts
 import { Request, Response } from "express";
-import { db } from "../database/banco-mongo";
+import { db } from "../database/banco-mongo.js";
 import { ObjectId } from "mongodb";
 
 class CarrinhoController {
