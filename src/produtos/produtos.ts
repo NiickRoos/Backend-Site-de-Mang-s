@@ -5,8 +5,8 @@ import { db } from "../database/banco-mongo.js";
 
 class ProdutosController {
   async adicionar(req: Request, res: Response) {
-    const {nome,preco,descricao,foto} = req.body;
-    const produto = {nome,preco,descricao,foto};
+    const {nome,preco,descricao,urlfoto} = req.body;
+    const produto = {nome,preco,descricao,urlfoto};
     const resultado = await db.collection('produtos').insertOne(produto);
     res.status(201).json({ ...produto, _id: resultado.insertedId });
   }
