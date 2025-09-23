@@ -1,13 +1,19 @@
-
-import { Request, Response } from "express"
-
-
+import { Request, Response } from "express";
+import { db } from "../database/banco-mongo";
 
 class UsuarioController {
-    adicionar(req:Request, res:Response) {
+  async adicionar(req: Request, res: Response) {
+    const estudante = req.body;
+    const resultado = await db.collection("estudantes").insertOne(estudante);
+    res.status(201).json({ ...estudante, _id: resultado.insertedId });
+  }
 
-    }
-    listar(req:Request, res:Response) {
-    }
-}                               
-export default new UsuarioController()
+  async listar(req: Request, res: Response) {
+    const estudantes = await db.collection("estudantes").find().toArray();
+    res.status(200).json(estudantes);
+  }
+}
+
+const usuarioController = new UsuarioController();
+
+export default usuarioController;
