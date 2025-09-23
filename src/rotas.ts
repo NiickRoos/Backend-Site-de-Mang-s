@@ -1,6 +1,6 @@
-import usuarioController from  "./usuarios/usuario.controller";
-import carrinhoController from "./carrinho/carrinho";
-import produtoController from "./produtos/produtos";
+import usuarioController from  "./usuarios/usuario.controller.js";
+import carrinhoController from "./carrinho/carrinho.js";
+import produtoController from "./produtos/produtos.js";
 import { Router } from "express";
 const  rotas = Router();
  
