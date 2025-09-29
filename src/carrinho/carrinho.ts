@@ -16,89 +16,69 @@ interface Carrinho {
   total: number;
 }
 
-class CarrinhoController {
-  
+class Carrinho {
   async adicionar(req: Request, res: Response) {
-    try {
-      const { usuarioId, produtoId, quantidade } = req.body;
+    const { usuarioId, produtoId, quantidade, precoUnitario, nome } = req.body;
 
-      const usuarioObjId = new ObjectId(usuarioId);
-      const produtoObjId = new ObjectId(produtoId);
+     let carrinho = await db.collection('carrinhos').findOne({ usuarioId });
 
-      const item = {
-        usuarioId: usuarioObjId,
-        produtoId: produtoObjId,
-        quantidade,
-        dataAdicao: new Date(),
+    const item: ItemCarrinho = {
+      produtoId,
+      quantidade,
+      precoUnitario,
+      nome
+    };  
+
+    if (!carrinho) {
+    
+      const carrinho = {
+        usuarioId,
+        itens: [item],
+        dataAtualizacao: new Date(),
+        total: item.precoUnitario * item.quantidade
       };
-
-      const resultado = await db.collection("carrinho").insertOne(item);
-
-      res.status(201).json({ mensagem: "Item adicionado ao carrinho.", _id: resultado.insertedId });
-    } catch (erro) {
-      console.error("Erro ao adicionar item ao carrinho:", erro);
-      res.status(500).json({ erro: "Erro interno ao adicionar item ao carrinho." });
+      await db.collection('carrinhos').insertOne(carrinho);
+    } else {
+      // Se o carrinho existir, adiciona o item
+      carrinho.itens.push(item);
+      carrinho.total += item.precoUnitario * item.quantidade;
+      carrinho.dataAtualizacao = new Date();
+      await db.collection('carrinhos').updateOne({ usuarioId }, { $set: carrinho });
     }
+
+    res.status(200).json(carrinho);
   }
 
   async listar(req: Request, res: Response) {
-    try {
-      const usuarioId = req.query.usuarioId as string;
-      const usuarioObjId = new ObjectId(usuarioId);
-
-      const itens = await db.collection("carrinho").find({ usuarioId: usuarioObjId }).toArray();
-
-      res.status(200).json(itens);
-    } catch (erro) {
-      console.error("Erro ao listar itens do carrinho:", erro);
-      res.status(500).json({ erro: "Erro interno ao listar itens do carrinho." });
-    }
+    const carrinhos = await db.collection('carrinhos').find().toArray();
+    res.status(200).json(carrinhos);
   }
 
-  async remover(req: Request, res: Response) {
-    try {
-      const { itemId } = req.params;
-
-      const resultado = await db.collection("carrinho").deleteOne({ _id: new ObjectId(itemId) });
-
-      res.status(200).json({ mensagem: "Item removido do carrinho." });
-    } catch (erro) {
-      console.error("Erro ao remover item do carrinho:", erro);
-      res.status(500).json({ erro: "Erro interno ao remover item do carrinho." });
-    }
+  async removerItem(req: Request, res: Response) {
+    const { id } = req.params;
+    await db.collection('carrinhos').updateOne(
+      { _id: new ObjectId(id) },
+      { $set: { itens: [] } }
+    );
+    res.status(200).json({ message: 'Itens removidos com sucesso' });
   }
 
   async atualizarQuantidade(req: Request, res: Response) {
-    try {
-      const { itemId } = req.params;
-      const { quantidade } = req.body;
-
-      await db.collection("carrinho").updateOne(
-        { _id: new ObjectId(itemId) },
-        { $set: { quantidade } }
-      );
-
-      res.status(200).json({ mensagem: "Quantidade do item atualizada." });
-    } catch (erro) {
-      console.error("Erro ao atualizar quantidade do item no carrinho:", erro);
-      res.status(500).json({ erro: "Erro interno ao atualizar quantidade do item no carrinho." });
-    }
+    const { id } = req.params;
+    const { quantidade } = req.body;
+    await db.collection('carrinhos').updateOne(
+      { _id: new ObjectId(id) },
+      { $set: { quantidade } }
+    );
+    res.status(200).json({ message: 'Quantidade atualizada com sucesso' });
   }
 
   async removerCarrinho(req: Request, res: Response) {
-    try {
-      const { usuarioId } = req.params;
-      const usuarioObjId = new ObjectId(usuarioId);
-
-      const resultado = await db.collection("carrinho").deleteMany({ usuarioId: usuarioObjId });
-
-      res.status(200).json({ mensagem: `Carrinho removido com ${resultado.deletedCount} itens.` });
-    } catch (erro) {
-      console.error("Erro ao remover carrinho do usuário:", erro);
-      res.status(500).json({ erro: "Erro interno ao remover carrinho do usuário." });
-    }
+    const { id } = req.params;
+    await db.collection('carrinhos').deleteOne({ _id: new ObjectId(id) });
+    res.status(204).send();
   }
 }
 
-const carrinhoController = new CarrinhoController();
-export default carrinhoController;
+
+export default new Carrinho();
