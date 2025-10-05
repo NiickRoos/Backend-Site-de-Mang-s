@@ -16,7 +16,7 @@ rotas.get("/produtos", produtoController.listar);
 // Rotas do carrinho
 rotas.post("/carrinho", carrinhoController.adicionar); // Adicionar item ao carrinho
 rotas.get("/carrinho", carrinhoController.listar); // Listar todos os carrinhos
-rotas.delete("/carrinho/:id", carrinhoController.removerItem); // Remover item do carrinho
+rotas.delete("/carrinho/:id", carrinhoController.removerCarrinho); // Remover carrinho completo
 rotas.put("/carrinho/:id", carrinhoController.atualizarQuantidade);// Atualizar quantidade do item no carrinho
 rotas.delete("/carrinho/:id/item/:itemId", carrinhoController.removerItem); // Remover item específico do carrinho
 
