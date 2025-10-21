@@ -16,9 +16,16 @@ interface Carrinho {
   total: number;
 }
 
+interface RequestAuth extends Request {
+  usuarioId?: string;
+}
 class Carrinho {
-  async adicionar(req: Request, res: Response) {
-    const { usuarioId, produtoId, quantidade, precoUnitario, nome } = req.body;
+  async adicionar(req: RequestAuth, res: Response) {
+    const {  produtoId, quantidade, precoUnitario, nome } = req.body;
+    const usuarioId = req.usuarioId!;
+    if(!usuarioId){
+       return res.status(400).json({message:"usuarioId é obrigatório"})
+    }
 
     let carrinho = await db.collection("carrinhos").findOne({ usuarioId });
 
@@ -52,39 +59,43 @@ class Carrinho {
     res.status(200).json(carrinhos);
   }
 
-  // Método atualizado para remover um item específico do carrinho
-  async removerItem(req: Request, res: Response) {
-    const { id } = req.params; // ID do carrinho
-    const { produtoId } = req.body; // ID do produto a ser removido
+  
+async removerItem(req: Request, res: Response) {
+  const { id } = req.params;
+  const { produtoId } = req.body;
 
-    if (!id) return res.status(400).json({ message: "ID do carrinho é obrigatório" });
-    if (!produtoId) return res.status(400).json({ message: "ID do produto é obrigatório" });
+  if (!id) return res.status(400).json({ message: "ID do carrinho é obrigatório" });
+  if (!produtoId) return res.status(400).json({ message: "ID do produto é obrigatório" });
 
-    const filtro = ObjectId.isValid(id)
-      ? { _id: new ObjectId(id) }
-      : { _id: id as any };
+  const filtro = ObjectId.isValid(id)
+    ? { _id: new ObjectId(id) }
+    : { _id: id as any };
 
-    const carrinho = await db.collection("carrinhos").findOne(filtro);
-    if (!carrinho) return res.status(404).json({ message: "Carrinho não encontrado" });
+  const carrinho = await db.collection("carrinhos").findOne(filtro);
+  if (!carrinho) return res.status(404).json({ message: "Carrinho não encontrado" });
 
-    const novosItens = carrinho.itens.filter((i: ItemCarrinho) => i.produtoId !== produtoId);
+  const novosItens = carrinho.itens.filter((i: ItemCarrinho) => i.produtoId !== produtoId);
+  if (novosItens.length === carrinho.itens.length)
+    return res.status(404).json({ message: "Produto não encontrado no carrinho" });
 
-    if (novosItens.length === carrinho.itens.length) {
-      return res.status(404).json({ message: "Produto não encontrado no carrinho" });
-    }
+  const novoTotal = novosItens.reduce(
+    (soma: number, i: ItemCarrinho) => soma + i.precoUnitario * i.quantidade,
+    0
+  );
 
-    const novoTotal = novosItens.reduce(
-      (soma: number, i: ItemCarrinho) => soma + i.precoUnitario * i.quantidade,
-      0
-    );
+  await db.collection("carrinhos").updateOne(filtro, {
+    $set: {
+      itens: novosItens,
+      total: novoTotal,
+      dataAtualizacao: new Date(),
+    },
+  });
 
-    await db.collection("carrinhos").updateOne(filtro, {
-      $set: { itens: novosItens, total: novoTotal, dataAtualizacao: new Date() },
-    });
-
-    res.status(200).json({ message: "Produto removido com sucesso", carrinho: { ...carrinho, itens: novosItens, total: novoTotal } });
-  }
-
+  res.status(200).json({
+    message: "Produto removido com sucesso",
+    carrinho: { ...carrinho, itens: novosItens, total: novoTotal },
+  });
+}
   async atualizarQuantidade(req: Request, res: Response) {
     const { id } = req.params;
     const { produtoId, quantidade } = req.body;
