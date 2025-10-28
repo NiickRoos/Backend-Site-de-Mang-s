@@ -6,12 +6,22 @@ import jwt from 'jsonwebtoken'
 
 class UsuarioController {
   async adicionar(req:Request, res:Response) {
-    const {nome,idade,email,senha} = req.body
+
+
+    const {nome,idade,email,senha, role} = req.body
     if(!nome || !idade || !email || !senha){
         return res.status(400).json({mensagem:"Dados incompletos (nome, idade, email, senha)"})
     }
     const senhaCriptografada = await bcrypt.hash(senha,10)
-    const usuario = {nome,idade,email,senha:senhaCriptografada}
+    //adicionei a possibilidade de ser ususarioou admin por padrão voce é usuario ao menos que clique e seja admin
+    const usuario = {
+      nome, 
+      idade,
+      email,
+      senha: senhaCriptografada,
+      role: role === "admin" ? "admin" : "user"
+    };
+   
     const resultado = await db.collection('usuarios').insertOne(usuario)
     res.status(201).json({...usuario, _id: resultado.insertedId})
 
@@ -30,10 +40,21 @@ class UsuarioController {
       const senhaValida = await bcrypt.compare(senha, usuario.senha)
       if((!senhaValida))
       return res.status(400).json({mensagem:"Usuário ou senha inválidos"})  
-      //criar um token
-      const token = jwt.sign({usuarioId: usuario._id}, process.env.JWT_SECRET!, {expiresIn:'1h'})
-        //devolver token
-      res.status(200).json({token})
-    }                               
+   
+      // Parte do token
+      const token = jwt.sign(
+        {
+          usuarioId: usuario._id,
+          role : usuario.role
+
+      },
+       process.env.JWT_SECRET!,
+        {expiresIn: '1h'}
+      );
+
+      res.status(200).json({ token, role: usuario.role });
+    }
+    
+     
   }
    export default new UsuarioController();

@@ -1,3 +1,6 @@
+
+//Rotas que não precisam de autenticação por consequência são as de usuários 
+
 import { Router } from "express";
 import usuarioController from "../usuarios/usuario.controller.js";
 

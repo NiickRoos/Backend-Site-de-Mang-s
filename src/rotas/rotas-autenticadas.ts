@@ -1,7 +1,12 @@
 
+//rotas Autenticadas para o usuario logado
+
+
 import carrinhoController from "../carrinho/carrinho.js";
 import usuarioController from "../usuarios/usuario.controller.js";
 import produtoController from "../produtos/produtos.js";
+import { Auth } from "../middleware/auth.js";
+import verificaRole from "../middleware/verificaRole.js";
 import { Router } from "express";
 
 const rotasAutenticadas = Router();
