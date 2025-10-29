@@ -14,12 +14,24 @@ class UsuarioController {
     }
     const senhaCriptografada = await bcrypt.hash(senha,10)
     //adicionei a possibilidade de ser ususarioou admin por padrão voce é usuario ao menos que clique e seja admin
+    // segurança: só permite criar admin se (1) não existir admin ainda ou (2) cabeçalho X-Admin-Setup corresponder à variável de ambiente ADMIN_SETUP_SECRET
+    let finalRole: "admin" | "user" = "user";
+    if (role === "admin") {
+      const existeAdmin = await db.collection('usuarios').findOne({ role: 'admin' });
+      const setupHeader = req.headers['x-admin-setup'];
+      const setupSecret = process.env.ADMIN_SETUP_SECRET;
+      if (!existeAdmin) {
+        finalRole = "admin";
+      } else if (setupHeader && setupSecret && setupHeader === setupSecret) {
+        finalRole = "admin";
+      }
+    }
     const usuario = {
       nome, 
       idade,
       email,
       senha: senhaCriptografada,
-      role: role === "admin" ? "admin" : "user"
+      role: finalRole
     };
    
     const resultado = await db.collection('usuarios').insertOne(usuario)
