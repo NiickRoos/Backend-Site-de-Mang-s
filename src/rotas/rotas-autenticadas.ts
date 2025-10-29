@@ -19,5 +19,7 @@ rotasAutenticadas.delete("/carrinho/:id/item/:itemId", carrinhoController.remove
 // PRODUTOS
 rotasAutenticadas.get("/produtos", produtosController.listar); // Qualquer usuário logado
 rotasAutenticadas.post("/produtos", verificaRole("admin"), produtosController.adicionar); // Só admin
+rotasAutenticadas.put("/produtos/:id", verificaRole("admin"), produtosController.atualizar); // Só admin
+rotasAutenticadas.delete("/produtos/:id", verificaRole("admin"), produtosController.remover); // Só admin
 
 export default rotasAutenticadas;
