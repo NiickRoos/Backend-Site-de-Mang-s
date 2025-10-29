@@ -18,13 +18,15 @@ interface Carrinho {
 
 interface RequestAuth extends Request {
   usuarioId?: string;
+  role?: string;
 }
+
 class Carrinho {
   async adicionar(req: RequestAuth, res: Response) {
-    const {  produtoId, quantidade, precoUnitario, nome } = req.body;
+    const { produtoId, quantidade, precoUnitario, nome } = req.body;
     const usuarioId = req.usuarioId!;
-    if(!usuarioId){
-       return res.status(400).json({message:"usuarioId é obrigatório"})
+    if (!usuarioId) {
+      return res.status(400).json({ message: "usuarioId é obrigatório" });
     }
 
     let carrinho = await db.collection("carrinhos").findOne({ usuarioId });
@@ -54,49 +56,55 @@ class Carrinho {
     }
   }
 
-  async listar(req: Request, res: Response) {
-    const carrinhos = await db.collection("carrinhos").find().toArray();
-    res.status(200).json(carrinhos);
+  async listar(req: RequestAuth, res: Response) {
+    const usuarioId = req.usuarioId;
+    if (!usuarioId) return res.status(401).json({ message: "Não autenticado" });
+    const carrinho = await db.collection("carrinhos").findOne({ usuarioId });
+    return res.status(200).json(carrinho ?? null);
   }
 
-  
-async removerItem(req: Request, res: Response) {
-  const { id } = req.params;
-  const { produtoId } = req.body;
+  async removerItem(req: RequestAuth, res: Response) {
+    const { id } = req.params;
+    const { produtoId } = req.body;
 
-  if (!id) return res.status(400).json({ message: "ID do carrinho é obrigatório" });
-  if (!produtoId) return res.status(400).json({ message: "ID do produto é obrigatório" });
+    if (!id) return res.status(400).json({ message: "ID do carrinho é obrigatório" });
+    if (!produtoId) return res.status(400).json({ message: "ID do produto é obrigatório" });
 
-  const filtro = ObjectId.isValid(id)
-    ? { _id: new ObjectId(id) }
-    : { _id: id as any };
+    const filtro = ObjectId.isValid(id)
+      ? { _id: new ObjectId(id) }
+      : { _id: id as any };
 
-  const carrinho = await db.collection("carrinhos").findOne(filtro);
-  if (!carrinho) return res.status(404).json({ message: "Carrinho não encontrado" });
+    const carrinho = await db.collection("carrinhos").findOne(filtro);
+    if (!carrinho) return res.status(404).json({ message: "Carrinho não encontrado" });
 
-  const novosItens = carrinho.itens.filter((i: ItemCarrinho) => i.produtoId !== produtoId);
-  if (novosItens.length === carrinho.itens.length)
-    return res.status(404).json({ message: "Produto não encontrado no carrinho" });
+    if (req.role !== 'admin' && carrinho.usuarioId !== req.usuarioId) {
+      return res.status(403).json({ message: "Sem permissão para alterar este carrinho" });
+    }
 
-  const novoTotal = novosItens.reduce(
-    (soma: number, i: ItemCarrinho) => soma + i.precoUnitario * i.quantidade,
-    0
-  );
+    const novosItens = carrinho.itens.filter((i: ItemCarrinho) => i.produtoId !== produtoId);
+    if (novosItens.length === carrinho.itens.length)
+      return res.status(404).json({ message: "Produto não encontrado no carrinho" });
 
-  await db.collection("carrinhos").updateOne(filtro, {
-    $set: {
-      itens: novosItens,
-      total: novoTotal,
-      dataAtualizacao: new Date(),
-    },
-  });
+    const novoTotal = novosItens.reduce(
+      (soma: number, i: ItemCarrinho) => soma + i.precoUnitario * i.quantidade,
+      0
+    );
 
-  res.status(200).json({
-    message: "Produto removido com sucesso",
-    carrinho: { ...carrinho, itens: novosItens, total: novoTotal },
-  });
-}
-  async atualizarQuantidade(req: Request, res: Response) {
+    await db.collection("carrinhos").updateOne(filtro, {
+      $set: {
+        itens: novosItens,
+        total: novoTotal,
+        dataAtualizacao: new Date(),
+      },
+    });
+
+    res.status(200).json({
+      message: "Produto removido com sucesso",
+      carrinho: { ...carrinho, itens: novosItens, total: novoTotal },
+    });
+  }
+
+  async atualizarQuantidade(req: RequestAuth, res: Response) {
     const { id } = req.params;
     const { produtoId, quantidade } = req.body;
     if (!id) return res.status(400).json({ message: "ID é obrigatório" });
@@ -107,6 +115,10 @@ async removerItem(req: Request, res: Response) {
 
     const carrinho = await db.collection("carrinhos").findOne(filtro);
     if (!carrinho) return res.status(404).json({ message: "Carrinho não encontrado" });
+
+    if (req.role !== 'admin' && carrinho.usuarioId !== req.usuarioId) {
+      return res.status(403).json({ message: "Sem permissão para alterar este carrinho" });
+    }
 
     const item = carrinho.itens.find((i: ItemCarrinho) => i.produtoId === produtoId);
     if (!item) return res.status(404).json({ message: "Produto não encontrado no carrinho" });
@@ -123,7 +135,7 @@ async removerItem(req: Request, res: Response) {
     res.status(200).json({ message: "Quantidade atualizada com sucesso", carrinho });
   }
 
-  async removerCarrinho(req: Request, res: Response) {
+  async removerCarrinho(req: RequestAuth, res: Response) {
     const { id } = req.params;
     if (!id) return res.status(400).json({ message: "ID é obrigatório" });
 
@@ -131,12 +143,28 @@ async removerItem(req: Request, res: Response) {
       ? { _id: new ObjectId(id) }
       : { _id: id as any };
 
+    const carrinho = await db.collection("carrinhos").findOne(filtro);
+    if (!carrinho) return res.status(404).json({ message: "Carrinho não encontrado" });
+
+    if (req.role !== 'admin' && carrinho.usuarioId !== req.usuarioId) {
+      return res.status(403).json({ message: "Sem permissão para remover este carrinho" });
+    }
+
     const resultado = await db.collection("carrinhos").deleteOne(filtro);
 
     if (resultado.deletedCount === 0)
       return res.status(404).json({ message: "Carrinho não encontrado" });
 
     res.status(200).json({ message: "Carrinho removido com sucesso" });
+  }
+
+  async listarTodos(req: RequestAuth, res: Response) {
+    if (req.role !== 'admin') {
+      return res.status(403).json({ message: "Sem permissão para listar todos os carrinhos" });
+    }
+
+    const carrinhos = await db.collection("carrinhos").find().toArray();
+    res.status(200).json(carrinhos);
   }
 }
 

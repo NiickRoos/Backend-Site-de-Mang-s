@@ -54,6 +54,13 @@ class UsuarioController {
 
       res.status(200).json({ token, role: usuario.role });
     }
+    async remover(req:Request, res:Response){
+      const {id} = req.params
+      if(!id) return res.status(400).json({mensagem:"ID é obrigatório"})
+      const resultado = await db.collection('usuarios').deleteOne({ _id: id as any })
+      if(resultado.deletedCount===0) return res.status(404).json({mensagem:"Usuário não encontrado"})
+      res.status(200).json({mensagem:"Usuário removido com sucesso"})
+    }
     
      
   }
