@@ -9,6 +9,14 @@ app.use(cors())
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
+// Rota pública raiz para evitar 401 ao acessar /
+app.get('/', (_req, res) => {
+    res.status(200).send('API online');
+});
+
+// Evita 401 no console ao acessar / por causa do /favicon.ico automático do navegador
+app.get('/favicon.ico', (_req, res) => res.status(204).end());
+
 app.use(rotasNaoAutenticadas)
 app.use(rotasAutenticadas);
 app.use(rotasAdm);
