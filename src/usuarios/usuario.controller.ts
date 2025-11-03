@@ -56,7 +56,7 @@ class UsuarioController {
       // Parte do token
       const token = jwt.sign(
         {
-          usuarioId: usuario._id,
+          usuarioId: usuario._id.toString(),
           role : usuario.role
 
       },
