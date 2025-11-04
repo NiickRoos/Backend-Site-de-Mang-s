@@ -29,56 +29,75 @@ function isValidObjectId(id: string) {
 
 class CarrinhoController {
   // ✅ Adicionar produto ao carrinho
-  async adicionar(req: RequestAuth, res: Response) {
-    try {
-      const { produtoId, quantidade, precoUnitario, nome } = req.body;
-      const usuarioId = req.usuarioId;
+async adicionar(req: RequestAuth, res: Response) {
+  try {
+    const { produtoId, quantidade, precoUnitario, nome } = req.body;
+    const usuarioId = req.usuarioId;
 
-      if (!usuarioId)
-        return res.status(400).json({ message: "usuarioId é obrigatório" });
+    if (!usuarioId)
+      return res.status(400).json({ message: "usuarioId é obrigatório" });
 
-      if (!produtoId || !quantidade || !precoUnitario || !nome)
-        return res
-          .status(400)
-          .json({ message: "produtoId, quantidade, precoUnitario e nome são obrigatórios" });
+    if (!produtoId || !quantidade || !precoUnitario || !nome)
+      return res
+        .status(400)
+        .json({ message: "produtoId, quantidade, precoUnitario e nome são obrigatórios" });
 
-      let carrinho = await db.collection("carrinhos").findOne({ usuarioId });
+    let carrinho = await db.collection("carrinhos").findOne({ usuarioId });
 
-      const item: ItemCarrinho = { produtoId, quantidade, precoUnitario, nome };
+    const item: ItemCarrinho = { produtoId, quantidade, precoUnitario, nome };
 
-      if (!carrinho) {
-        const novoCarrinho: Carrinho = {
-          usuarioId,
-          itens: [item],
-          dataAtualizacao: new Date(),
-          total: item.precoUnitario * item.quantidade,
-        };
-        await db.collection("carrinhos").insertOne(novoCarrinho);
-        return res.status(201).json(novoCarrinho);
-      }
+    // 🔹 Se o usuário ainda não tem carrinho, cria um novo
+    if (!carrinho) {
+      const novoCarrinho: Carrinho = {
+        usuarioId,
+        itens: [item],
+        dataAtualizacao: new Date(),
+        total: item.precoUnitario * item.quantidade,
+      };
 
-      // Se já existe, atualiza
-      carrinho.itens.push(item);
-      carrinho.total += item.precoUnitario * item.quantidade;
-      carrinho.dataAtualizacao = new Date();
-
-      await db.collection("carrinhos").updateOne(
-        { usuarioId },
-        {
-          $set: {
-            itens: carrinho.itens,
-            total: carrinho.total,
-            dataAtualizacao: carrinho.dataAtualizacao,
-          },
-        }
-      );
-
-      return res.status(200).json(carrinho);
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ message: "Erro interno ao adicionar ao carrinho" });
+      await db.collection("carrinhos").insertOne(novoCarrinho);
+      return res.status(201).json(novoCarrinho);
     }
+
+    // 🔹 Se já existe carrinho, verifica se o produto já está na lista
+    const indiceExistente = carrinho.itens.findIndex(
+      (i: ItemCarrinho) => i.produtoId === produtoId
+    );
+
+    if (indiceExistente >= 0) {
+      // ✅ Produto já existe → apenas atualiza a quantidade
+      carrinho.itens[indiceExistente].quantidade += quantidade;
+    } else {
+      // 🔹 Produto novo → adiciona ao carrinho
+      carrinho.itens.push(item);
+    }
+
+    // 🔹 Atualiza total
+    carrinho.total = carrinho.itens.reduce(
+      (soma: number, i: ItemCarrinho) => soma + i.precoUnitario * i.quantidade,
+      0
+    );
+
+    carrinho.dataAtualizacao = new Date();
+
+    // 🔹 Salva as alterações
+    await db.collection("carrinhos").updateOne(
+      { usuarioId },
+      {
+        $set: {
+          itens: carrinho.itens,
+          total: carrinho.total,
+          dataAtualizacao: carrinho.dataAtualizacao,
+        },
+      }
+    );
+
+    return res.status(200).json(carrinho);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Erro interno ao adicionar ao carrinho" });
   }
+}
 
   // ✅ Listar carrinho do usuário logado
   async listar(req: RequestAuth, res: Response) {
