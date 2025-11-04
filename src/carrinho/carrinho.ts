@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { db } from "../database/banco-mongo.js";
 import { ObjectId } from "mongodb";
 
+
 interface ItemCarrinho {
   produtoId: string;
   quantidade: number;
@@ -81,79 +82,88 @@ class CarrinhoController {
 
   // ✅ Listar carrinho do usuário logado
   async listar(req: RequestAuth, res: Response) {
-    try {
-      const usuarioId = req.usuarioId;
-      if (!usuarioId)
-        return res.status(401).json({ message: "Não autenticado" });
+  try {
+    const usuarioId = req.usuarioId;
+    if (!usuarioId)
+      return res.status(401).json({ message: "Não autenticado" });
 
-      const carrinho = await db.collection("carrinhos").findOne({ usuarioId });
-      if (!carrinho) {
-        return res.status(200).json([]);
-      }
+    const carrinho = await db.collection("carrinhos").findOne({ usuarioId });
 
-      return res.status(200).json(carrinho.itens);
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ message: "Erro ao listar carrinho" });
+    if (!carrinho) {
+      return res.status(200).json({ _id: null, itens: [] });
     }
-  }
 
+    // Retorna o carrinho completo com ID e itens
+    return res.status(200).json({
+      _id: carrinho._id,
+      itens: carrinho.itens || []
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Erro ao listar carrinho" });
+  }
+}
   // ✅ Remover item do carrinho
   async removerItem(req: RequestAuth, res: Response) {
-    try {
-      const { id } = req.params;
-      const { produtoId } = req.body;
+  try {
+    const { id, produtoId } = req.params; // agora pega produtoId da URL
 
-      if (!id || !produtoId)
-        return res
-          .status(400)
-          .json({ message: "ID do carrinho e produto são obrigatórios" });
+    console.log("Removendo item do carrinho:", id, produtoId);
 
-      if (!isValidObjectId(id))
-        return res.status(400).json({ message: "ID inválido" });
+    if (!id || !produtoId)
+      return res
+        .status(400)
+        .json({ message: "ID do carrinho e produto são obrigatórios" });
 
-      const carrinho = await db.collection("carrinhos").findOne({ _id: new ObjectId(id) });
-      if (!carrinho)
-        return res.status(404).json({ message: "Carrinho não encontrado" });
+    if (!isValidObjectId(id))
+      return res.status(400).json({ message: "ID do carrinho inválido" });
 
-      if (req.role !== "admin" && carrinho.usuarioId !== req.usuarioId)
-        return res.status(403).json({ message: "Sem permissão" });
+    const carrinho = await db
+      .collection("carrinhos")
+      .findOne({ _id: new ObjectId(id) });
 
-      const novosItens = carrinho.itens.filter(
-        (i: ItemCarrinho) => i.produtoId !== produtoId
-      );
+    if (!carrinho)
+      return res.status(404).json({ message: "Carrinho não encontrado" });
 
-      if (novosItens.length === carrinho.itens.length)
-        return res
-          .status(404)
-          .json({ message: "Produto não encontrado no carrinho" });
+    // Verifica permissão
+    if (req.role !== "admin" && carrinho.usuarioId !== req.usuarioId)
+      return res.status(403).json({ message: "Sem permissão" });
 
-      const novoTotal = novosItens.reduce(
-        (soma: number, i: ItemCarrinho) =>
-          soma + i.precoUnitario * i.quantidade,
-        0
-      );
+    const novosItens = carrinho.itens.filter(
+      (i: ItemCarrinho) => i.produtoId !== produtoId
+    );
 
-      await db.collection("carrinhos").updateOne(
-        { _id: new ObjectId(id) },
-        {
-          $set: {
-            itens: novosItens,
-            total: novoTotal,
-            dataAtualizacao: new Date(),
-          },
-        }
-      );
+    if (novosItens.length === carrinho.itens.length)
+      return res
+        .status(404)
+        .json({ message: "Produto não encontrado no carrinho" });
 
-      res.status(200).json({
-        message: "Produto removido com sucesso",
-        carrinho: { ...carrinho, itens: novosItens, total: novoTotal },
-      });
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ message: "Erro ao remover item" });
-    }
+    const novoTotal = novosItens.reduce(
+      (soma: number, i: ItemCarrinho) => soma + i.precoUnitario * i.quantidade,
+      0
+    );
+
+    await db.collection("carrinhos").updateOne(
+      { _id: new ObjectId(id) },
+      {
+        $set: {
+          itens: novosItens,
+          total: novoTotal,
+          dataAtualizacao: new Date(),
+        },
+      }
+    );
+
+    res.status(200).json({
+      message: "Produto removido com sucesso",
+      carrinho: { ...carrinho, itens: novosItens, total: novoTotal },
+    });
+  } catch (err) {
+    console.error("Erro ao remover item:", err);
+    res.status(500).json({ message: "Erro ao remover item" });
   }
+}
 
   // ✅ Atualizar quantidade de item
   async atualizarQuantidade(req: RequestAuth, res: Response) {
