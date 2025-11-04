@@ -105,9 +105,10 @@ class CarrinhoController {
   }
 }
   // ✅ Remover item do carrinho
-  async removerItem(req: RequestAuth, res: Response) {
+ async removerItem(req: RequestAuth, res: Response) {
   try {
-    const { id, produtoId } = req.params; // agora pega produtoId da URL
+    const { id, itemId } = req.params; // ✅ Corrigido
+    const produtoId = itemId; // ✅ nome compatível com frontend
 
     console.log("Removendo item do carrinho:", id, produtoId);
 
@@ -164,6 +165,7 @@ class CarrinhoController {
     res.status(500).json({ message: "Erro ao remover item" });
   }
 }
+
 
   // ✅ Atualizar quantidade de item
   async atualizarQuantidade(req: RequestAuth, res: Response) {
