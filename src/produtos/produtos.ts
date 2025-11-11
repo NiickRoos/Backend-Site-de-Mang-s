@@ -2,8 +2,6 @@
 import { Request, Response } from "express";
 import { db } from "../database/banco-mongo.js";
 import { ObjectId } from "mongodb";
-import { Auth } from "../middleware/auth.js";
-import { verificaRole } from "../middleware/verificaRole.js";
 
 class ProdutosController {
   async adicionar(req: Request, res: Response) {

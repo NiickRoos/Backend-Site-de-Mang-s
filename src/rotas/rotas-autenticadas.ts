@@ -9,6 +9,8 @@ const rotasAutenticadas = Router();
 // Todas as rotas abaixo precisam de autenticação
 rotasAutenticadas.use(Auth);
 
+
+
 // CARRINHO
 rotasAutenticadas.post("/carrinho", carrinhoController.adicionar);
 rotasAutenticadas.get("/carrinho", carrinhoController.listar);

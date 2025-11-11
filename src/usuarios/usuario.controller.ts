@@ -3,6 +3,7 @@ import { Request, Response } from "express"
 import { db } from "../database/banco-mongo.js"
 import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
+import { ObjectId } from 'mongodb'
 
 class UsuarioController {
   async adicionar(req:Request, res:Response) {
@@ -65,6 +66,43 @@ class UsuarioController {
       );
 
       res.status(200).json({ token, role: usuario.role });
+    }
+    async me(req: Request, res: Response) {
+      try {
+        const usuarioId = (req as any).usuarioId as string | undefined;
+        if (!usuarioId) {
+          return res.status(401).json({ mensagem: "Não autenticado" });
+        }
+        const _id = new ObjectId(usuarioId);
+        const usuario = await db.collection('usuarios').findOne({ _id });
+        if (!usuario) {
+          return res.status(404).json({ mensagem: "Usuário não encontrado" });
+        }
+        const { senha, ...publico } = usuario as any;
+        return res.status(200).json(publico);
+      } catch (e) {
+        return res.status(400).json({ mensagem: "Requisição inválida" });
+      }
+    }
+    async uploadAvatar(req: Request, res: Response) {
+      try {
+        const usuarioId = (req as any).usuarioId as string | undefined;
+        if (!usuarioId) {
+          return res.status(401).json({ mensagem: "Não autenticado" });
+        }
+        const file = (req as any).file as any;
+        if (!file) {
+          return res.status(400).json({ mensagem: "Arquivo 'avatar' é obrigatório" });
+        }
+        const relativePath = file.path.replace(/\\/g, '/').replace(/^.*uploads\//, 'uploads/');
+        const baseUrl = `${req.protocol}://${req.get('host')}`;
+        const avatarUrl = `${baseUrl}/${relativePath}`;
+        const _id = new ObjectId(usuarioId);
+        await db.collection('usuarios').updateOne({ _id }, { $set: { avatarUrl } });
+        return res.status(200).json({ avatarUrl });
+      } catch (e) {
+        return res.status(400).json({ mensagem: "Falha ao atualizar avatar" });
+      }
     }
     async remover(req:Request, res:Response){
       const {id} = req.params
