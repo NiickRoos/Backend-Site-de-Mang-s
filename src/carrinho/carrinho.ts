@@ -190,7 +190,7 @@ class CarrinhoController {
     try {
       const { id } = req.params;
       const { produtoId, quantidade } = req.body;
-
+ 
       if (!id || !produtoId || quantidade === undefined)
         return res
           .status(400)
@@ -277,6 +277,92 @@ class CarrinhoController {
     } catch (err) {
       console.error(err);
       res.status(500).json({ message: "Erro ao listar carrinhos" });
+    }
+  }
+
+  //  Filtrar itens do carrinho - Implementado por Amanda
+  async filtrarItens(req: RequestAuth, res: Response) {
+    try {
+      const usuarioId = req.usuarioId;
+      if (!usuarioId)
+        return res.status(401).json({ message: "Não autenticado" });
+
+      // Parâmetros de filtro - Amanda
+      const { nome, precoMin, precoMax, quantidadeMin, quantidadeMax } = req.query;
+
+      // Busca o carrinho do usuário - Amanda
+      const carrinho = await db.collection("carrinhos").findOne({ usuarioId });
+      
+      if (!carrinho || !carrinho.itens) {
+        return res.status(200).json({ itens: [], total: 0 });
+      }
+
+      // Aplica os filtros - Amanda
+      let itensFiltrados = carrinho.itens.filter((item: ItemCarrinho) => {
+        // Filtro por nome - Amanda
+        if (nome && typeof nome === 'string') {
+          const nomeLower = nome.toLowerCase();
+          if (!item.nome.toLowerCase().includes(nomeLower)) {
+            return false;
+          }
+        }
+
+        // Filtro por preço mínimo - Amanda
+        if (precoMin && typeof precoMin === 'string') {
+          const min = parseFloat(precoMin);
+          if (isNaN(min) || item.precoUnitario < min) {
+            return false;
+          }
+        }
+
+        // Filtro por preço máximo - Amanda
+        if (precoMax && typeof precoMax === 'string') {
+          const max = parseFloat(precoMax);
+          if (isNaN(max) || item.precoUnitario > max) {
+            return false;
+          }
+        }
+
+        // Filtro por quantidade mínima - Amanda
+        if (quantidadeMin && typeof quantidadeMin === 'string') {
+          const min = parseInt(quantidadeMin);
+          if (isNaN(min) || item.quantidade < min) {
+            return false;
+          }
+        }
+
+        // Filtro por quantidade máxima - Amanda
+        if (quantidadeMax && typeof quantidadeMax === 'string') {
+          const max = parseInt(quantidadeMax);
+          if (isNaN(max) || item.quantidade > max) {
+            return false;
+          }
+        }
+
+        return true;
+      });
+
+      // Recalcula o total dos itens filtrados - Amanda
+      const totalFiltrado = itensFiltrados.reduce(
+        (soma: number, item: ItemCarrinho) => soma + (item.precoUnitario * item.quantidade),
+        0
+      );
+
+      res.status(200).json({
+        itens: itensFiltrados,
+        total: totalFiltrado,
+        filtrosAplicados: {
+          nome: nome || null,
+          precoMin: precoMin || null,
+          precoMax: precoMax || null,
+          quantidadeMin: quantidadeMin || null,
+          quantidadeMax: quantidadeMax || null
+        }
+      });
+
+    } catch (err) {
+      console.error("Erro ao filtrar itens do carrinho - Amanda:", err);
+      res.status(500).json({ message: "Erro ao filtrar itens do carrinho" });
     }
   }
 }
