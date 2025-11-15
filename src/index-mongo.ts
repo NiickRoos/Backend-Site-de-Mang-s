@@ -5,16 +5,23 @@ import rotasAutenticadas from './rotas/rotas-autenticadas.js';
 import rotasAdm from './rotas/rotas-adm.js';
 import cors from 'cors';
 import fs from 'fs';
+import { connectMongo } from './database/banco-mongo.js';
+
 const app = express();
 app.use(cors())
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
+// Conectar ao MongoDB antes de iniciar o servidor
+connectMongo().catch(err => {
+  console.error('Erro ao conectar ao MongoDB:', err);
+  process.exit(1);
+});
+
+
+
 // Garante que a pasta de uploads exista
 try { fs.mkdirSync('uploads', { recursive: true }); } catch {}
-
-// Servir arquivos de upload (imagens de avatar)
-app.use('/uploads', express.static('uploads'));
 
 // Rota pública raiz para evitar 401 ao acessar /
 app.get('/', (_req, res) => {
