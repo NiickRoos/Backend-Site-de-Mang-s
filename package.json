@@ -6,7 +6,7 @@
     "dev": "tsx  watch src/index-mongo.ts",
     "dev:mongo": "tsx  watch src/index-mongo.ts",
     "build": "npm install && tsc",
-    "start": "node dist/index-mongo.js",
+     "start": "ts-node src/index-mongo.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
@@ -23,7 +23,8 @@
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^6.19.0",
     "multer": "^2.0.2",
-    "mysql2": "^3.14.3"
+    "mysql2": "^3.14.3",
+    "ts-node": "^10.9.2"
   },
   "devDependencies": {
     "@types/axios": "^0.9.36",
@@ -32,8 +33,8 @@
     "@types/express": "^5.0.3",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/multer": "^2.0.0",
-    "@types/node": "^24.6.2",
+    "@types/node": "^24.10.1",
     "tsx": "^4.20.4",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.3"
   }
 }
