@@ -23,6 +23,7 @@
     "mongodb": "^6.19.0",
     "multer": "^2.0.2",
     "mysql2": "^3.14.3",
+    "stripe": "^20.0.0",
     "ts-node": "^10.9.2"
   },
   "devDependencies": {
@@ -33,6 +34,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/multer": "^2.0.0",
     "@types/node": "^24.10.1",
+    "@types/stripe": "^8.0.416",
     "tsx": "^4.20.4",
     "typescript": "^5.9.3"
   }

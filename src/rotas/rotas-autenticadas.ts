@@ -23,7 +23,7 @@ rotasAutenticadas.get("/carrinho/filtrar", carrinhoController.filtrarItens); // 
 rotasAutenticadas.delete("/carrinho/:id", carrinhoController.removerCarrinho);
 rotasAutenticadas.put("/carrinho/:id", carrinhoController.atualizarQuantidade);
 rotasAutenticadas.delete("/carrinho/:id/item/:itemId", carrinhoController.removerItem);
-
+rotasAutenticadas.post("/carrinho/:carrinhoId/finalizar", carrinhoController.finalizarCompra);
 // ========================================
 // ROTAS DE PRODUTOS - CONTROLE DE ACESSO POR ROLE (NICOLE A1)
 // ========================================
@@ -43,5 +43,7 @@ rotasAutenticadas.put("/produtos/:id", verificaRole("admin"), produtosController
 // DELETE /produtos/:id - Apenas ADMIN pode excluir produtos
 // Middleware verificaRole("admin") bloqueia usuários comuns
 rotasAutenticadas.delete("/produtos/:id", verificaRole("admin"), produtosController.remover); // Só admin
+
+
 
 export default rotasAutenticadas;

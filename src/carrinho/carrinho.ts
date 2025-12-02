@@ -1,9 +1,12 @@
-import { Request, Response } from "express";
+import { Request, type Response } from "express";
 import { db } from "../database/banco-mongo.js";
 import { ObjectId } from "mongodb";
+import Stripe from "stripe";
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
 // Função auxiliar para validar o ID
-function isValidObjectId(id: string) {
+function isValidObjectId(id?: string) {
+  if (!id) return false;
   return ObjectId.isValid(id) && new ObjectId(id).toString() === id;
 }
 
@@ -99,29 +102,29 @@ class CarrinhoController {
   }
 
   //  Listar carrinho do usuário logado
-  async listar(req: RequestAuth, res: Response) {
-    try {
-      const usuarioId = req.usuarioId;
-      if (!usuarioId)
-        return res.status(401).json({ message: "Não autenticado" });
+ async listar(req: RequestAuth, res: Response) {
+  try {
+    const usuarioId = req.usuarioId;
+    if (!usuarioId)
+      return res.status(401).json({ message: "Não autenticado" });
 
-      const carrinho = await db.collection("carrinhos").findOne({ usuarioId });
+    const carrinho = await db.collection("carrinhos").findOne({ usuarioId });
 
-      if (!carrinho) {
-        return res.status(200).json({ _id: null, itens: [] });
-      }
-
-      // Retorna o carrinho completo com ID e itens
-      return res.status(200).json({
-        _id: carrinho._id,
-        itens: carrinho.itens || []
-      });
-
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ message: "Erro ao listar carrinho" });
+    if (!carrinho) {
+      return res.status(200).json({ _id: null, itens: [] });
     }
+
+    return res.status(200).json({
+      _id: carrinho._id.toString(), // 👈 RESOLVIDO
+      itens: carrinho.itens || []
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Erro ao listar carrinho" });
   }
+}
+
 
   //  Remover item do carrinho
   async removerItem(req: RequestAuth, res: Response) {
@@ -363,6 +366,85 @@ class CarrinhoController {
     } catch (err) {
       console.error("Erro ao filtrar itens do carrinho - Amanda:", err);
       res.status(500).json({ message: "Erro ao filtrar itens do carrinho" });
+    }
+  }
+  
+  async criarPagamentoCartao(req: RequestAuth, res: Response) {
+    try {
+      const usuarioId = req.usuarioId;
+
+      if (!usuarioId)
+        return res.status(400).json({ message: "usuarioId é obrigatório" });
+
+      // Buscar o carrinho do usuário
+      const carrinho = await db.collection("carrinhos").findOne({ usuarioId });
+
+      if (!carrinho || carrinho.itens.length === 0)
+        return res.status(400).json({ message: "Carrinho vazio" });
+
+      // Converter total para centavos (BRL)
+      const amount = Math.round(carrinho.total * 100);
+
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount,
+        currency: "brl",
+        payment_method_types: ["card"],
+        metadata: {
+          usuarioId,
+          pedido_id: carrinho._id?.toString() || "",
+        },
+      });
+
+      res.json({
+        clientSecret: paymentIntent.client_secret,
+      });
+    } catch (err) {
+      if (err instanceof Error)
+        return res.status(400).json({ mensagem: err.message });
+      res.status(400).json({ mensagem: "Erro de pagamento desconhecido!" });
+    }
+  }
+
+  // Finalizar compra
+    // =====================================================
+  // FINALIZAR COMPRA (CRIAR PEDIDO)
+  // =====================================================
+  async finalizarCompra(req: RequestAuth, res: Response) {
+    try {
+      const usuarioId = req.usuarioId;
+      const { carrinhoId } = req.params;
+
+      if (!isValidObjectId(carrinhoId))
+        return res.status(400).json({ message: "ID inválido" });
+
+      const carrinho = await db.collection("carrinhos").findOne({
+        _id: new ObjectId(carrinhoId),
+        usuarioId
+      });
+
+      if (!carrinho)
+        return res.status(404).json({ message: "Carrinho não encontrado" });
+
+      const pedido = {
+        usuarioId,
+        itens: carrinho.itens,
+        total: carrinho.total,
+        status: "pendente",
+        dataPedido: new Date(),
+        dataAtualizacao: new Date()
+      };
+
+      await db.collection("pedidos").insertOne(pedido);
+
+      await db.collection("carrinhos").updateOne(
+        { _id: new ObjectId(carrinhoId) },
+        { $set: { itens: [], total: 0, dataAtualizacao: new Date() } }
+      );
+
+      return res.status(200).json({ message: "Compra finalizada", pedido });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: "Erro ao finalizar compra" });
     }
   }
 }
